@@ -31,7 +31,6 @@
 #include <linux/suspend.h>
 #include <trace/events/power.h>
 #include <linux/cpufreq.h>
-#include <linux/cpuidle.h>
 #include <linux/devfreq.h>
 #include <linux/timer.h>
 #include <linux/wakeup_reason.h>
