@@ -2234,6 +2234,7 @@ static int __init msm_drm_register(void)
 
 	DBG("init");
 	kmem_vblank_work_pool = KMEM_CACHE(vblank_work, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+	sde_fence_register();
 	sde_rsc_rpmh_register();
 	sde_rsc_register();
 	dsi_display_register();

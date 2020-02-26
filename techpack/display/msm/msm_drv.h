@@ -1326,6 +1326,8 @@ static inline void sde_rotator_smmu_driver_unregister(void)
 }
 #endif /* CONFIG_MSM_SDE_ROTATOR */
 
+void __init sde_fence_register(void);
+
 struct clk *msm_clk_get(struct platform_device *pdev, const char *name);
 int msm_clk_bulk_get(struct device *dev, struct clk_bulk_data **bulk);
 
