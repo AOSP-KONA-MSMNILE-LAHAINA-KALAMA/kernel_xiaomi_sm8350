@@ -83,22 +83,22 @@ struct msm_pinctrl {
 static struct msm_pinctrl *msm_pinctrl_data;
 
 #define MSM_ACCESSOR(name) \
-static u32 msm_readl_##name(struct msm_pinctrl *pctrl, \
+static u32 __maybe_unused msm_readl_##name(struct msm_pinctrl *pctrl, \
 			    const struct msm_pingroup *g) \
 { \
 	return readl(pctrl->regs[g->tile] + g->name##_reg); \
 } \
-static void msm_writel_##name(u32 val, struct msm_pinctrl *pctrl, \
+static void __maybe_unused msm_writel_##name(u32 val, struct msm_pinctrl *pctrl, \
 			      const struct msm_pingroup *g) \
 { \
 	writel(val, pctrl->regs[g->tile] + g->name##_reg); \
 } \
-static u32 msm_readl_relaxed_##name(struct msm_pinctrl *pctrl, \
+static u32 __maybe_unused msm_readl_relaxed_##name(struct msm_pinctrl *pctrl, \
 			    const struct msm_pingroup *g) \
 { \
 	return readl_relaxed(pctrl->regs[g->tile] + g->name##_reg); \
 } \
-static void msm_writel_relaxed_##name(u32 val, struct msm_pinctrl *pctrl, \
+static void __maybe_unused msm_writel_relaxed_##name(u32 val, struct msm_pinctrl *pctrl, \
 			      const struct msm_pingroup *g) \
 { \
 	writel_relaxed(val, pctrl->regs[g->tile] + g->name##_reg); \
