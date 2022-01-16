@@ -97,7 +97,7 @@ int xhci_handshake_check_state(struct xhci_hcd *xhci,
 		if (result == done)
 			return 0;
 		udelay(1);
-		timeout_us;
+		timeout_us--;
 	} while (timeout_us > 0);
 	return -ETIMEDOUT;
 }
