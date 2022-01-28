@@ -4710,7 +4710,7 @@ static int aw8697_i2c_probe(struct i2c_client *i2c,
 	    !(aw8697->flags & AW8697_FLAG_SKIP_INTERRUPTS)) {
 		/* register irq handler */
 		aw8697_interrupt_setup(aw8697);
-		irq_flags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+		irq_flags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_PRIME_AFFINE;
 		ret = devm_request_threaded_irq(&i2c->dev,
 						gpio_to_irq(aw8697->irq_gpio),
 						NULL, aw8697_irq, irq_flags,
