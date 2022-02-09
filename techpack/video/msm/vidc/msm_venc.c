@@ -2577,7 +2577,11 @@ int msm_venc_set_intra_period(struct msm_vidc_inst *inst)
 				sizeof(adaptive_p_b_intra_period));
 
 	} else {
-		s_vpr_h(inst->sid, "%s: pframes: %d bframes: %d\n",
+		if(intra_period.pframes >= 120 && intra_period.bframes == 0){
+			intra_period.pframes = 30;
+			s_vpr_e(inst->sid, "%s: modified pframes as 30 for slow motion\n",__func__);
+		}
+		s_vpr_e(inst->sid, "%s: pframes: %d bframes: %d\n",
 				__func__, intra_period.pframes,
 				intra_period.bframes);
 		rc = call_hfi_op(hdev, session_set_property, inst->session,
