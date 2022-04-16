@@ -30,10 +30,6 @@
 #include "cyttsp5_regs.h"
 #include <linux/kthread.h>
 
-#ifdef CYTTSP5_XIAOMI_TOUCHFEATURE
-#include "../xiaomi/xiaomi_touch.h"
-#endif
-
 #define CY_CORE_STARTUP_RETRY_COUNT		3
 
 MODULE_FIRMWARE(CY_FW_FILE_NAME);
@@ -5972,45 +5968,7 @@ static int cyttsp5_setup_irq_gpio(struct cyttsp5_core_data *cd)
 	return rc;
 }
 
-#ifdef CYTTSP5_XIAOMI_TOUCHFEATURE
 static struct cyttsp5_core_data *cyttsp5_data;
-static struct xiaomi_touch_interface xiaomi_touch_interfaces;
-
-static int cyttsp5_set_cur_value(int mode, int value)
-{
-	int ret = 0;
-	struct device *dev;
-
-	if (!cyttsp5_data)
-		return -ENODEV;
-
-	dev = cyttsp5_data->dev;
-	parade_debug(dev, DEBUG_LEVEL_1, "%s: mode:%d,value:%d\n", __func__, mode, value);
-
-	if (mode == Touch_Doubletap_Mode && value >= 0) {
-		pm_runtime_get_sync(dev);
-		mutex_lock(&cyttsp5_data->system_lock);
-		if (cyttsp5_data->sysinfo.ready && IS_PIP_VER_GE(&cyttsp5_data->sysinfo, 1, 2))
-			cyttsp5_data->easy_wakeup_gesture = (u8)value;
-		else
-			ret = -ENODEV;
-		mutex_unlock(&cyttsp5_data->system_lock);
-
-		pm_runtime_put(dev);
-
-		parade_debug(dev, DEBUG_LEVEL_1, "%s: update gesture state:%d, ret = %d\n",
-					__func__, cyttsp5_data->easy_wakeup_gesture, ret);
-	}
-	return ret;
-}
-
-static void cyttsp5_init_xiaomi_touchfeature()
-{
-	memset(&xiaomi_touch_interfaces, 0x00, sizeof(struct xiaomi_touch_interface));
-	xiaomi_touch_interfaces.setModeValue = cyttsp5_set_cur_value;
-	xiaomitouch_register_modedata(1, &xiaomi_touch_interfaces);
-}
-#endif
 
 int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 		u16 irq, size_t xfer_buf_size)
@@ -6216,10 +6174,7 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 	cd->pm_notifier.notifier_call = cyttsp5_pm_notifier;
 	register_pm_notifier(&cd->pm_notifier);
 #endif
-#ifdef CYTTSP5_XIAOMI_TOUCHFEATURE
 	cyttsp5_data = cd;
-	cyttsp5_init_xiaomi_touchfeature();
-#endif
 	is_cyttsp5_probe_success = true;
 	return 0;
 

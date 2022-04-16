@@ -100,8 +100,6 @@
 #define CY_MAX_ELEN 100
 #endif
 
-#define CYTTSP5_XIAOMI_TOUCHFEATURE
-
 enum PARADE_DEBUG_LEVEL {
 	DEBUG_LEVEL_0,/*no debug info*/
 	DEBUG_LEVEL_1,/*only print dev_dbg info*/
