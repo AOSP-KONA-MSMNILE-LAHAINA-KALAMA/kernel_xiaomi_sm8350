@@ -631,22 +631,32 @@ static int dsi_panel_update_doze(struct dsi_panel *panel) {
 		return 0;
 	}
 
-	if (panel->doze_enabled) {
+	if (panel->doze_enabled && panel->doze_mode == DSI_DOZE_HBM) {
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DOZE_HBM);
 		if (rc)
-			DSI_ERR("[%s] failed to send doze hbm cmd, rc=%d\n",
+			DSI_ERR("[%s] failed to send DSI_CMD_SET_MI_DOZE_HBM cmd, rc=%d\n",
 					panel->name, rc);
-	} else {
+	} else if (panel->doze_enabled && panel->doze_mode == DSI_DOZE_LPM) {
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DOZE_LBM);
+		if (rc)
+			DSI_ERR("[%s] failed to send DSI_CMD_SET_MI_DOZE_LBM cmd, rc=%d\n",
+					panel->name, rc);
+	} else if (!panel->doze_enabled && panel->doze_mode == DSI_DOZE_HBM) {
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DOZE_HBM_NOLP);
 		if (rc)
-			DSI_ERR("[%s] failed to send nolp cmd, rc=%d\n",
+			DSI_ERR("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
+					panel->name, rc);
+	} else if (!panel->doze_enabled && panel->doze_mode == DSI_DOZE_LPM) {
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DOZE_LBM_NOLP);
+		if (rc)
+			DSI_ERR("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 					panel->name, rc);
 	}
 
 	return rc;
 }
 
-static int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status) {
+int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status) {
 	if (status == panel->doze_enabled)
 		return 0;
 
@@ -797,6 +807,46 @@ int dsi_panel_apply_requested_fod_hbm(struct dsi_panel *panel)
 	dsi_panel_set_fod_hbm(panel, panel->fod_hbm_requested);
 
 done:
+	mutex_unlock(&panel->panel_lock);
+
+	if (panel->hbm_enabled && !panel->fod_hbm_requested)
+		dsi_panel_set_hbm_mode(panel, panel->hbm_enabled);
+
+	return rc;
+}
+
+int dsi_panel_set_doze_mode(struct dsi_panel *panel, enum dsi_doze_mode_type mode) {
+	if (panel->doze_mode == mode)
+		return 0;
+
+	panel->doze_mode = mode;
+
+	if (!panel->doze_enabled)
+		return 0;
+
+	return dsi_panel_update_doze(panel);
+}
+
+int dsi_panel_set_hbm_mode(struct dsi_panel *panel, bool status)
+{
+	enum dsi_cmd_set_type type;
+	int rc;
+
+	if (panel->doze_enabled) {
+		return 0;
+	}
+
+	if (panel->hbm_enabled)
+		type = DSI_CMD_SET_MI_HBM_ON;
+	else
+		type = DSI_CMD_SET_MI_HBM_OFF;
+
+	mutex_lock(&panel->panel_lock);
+	rc = dsi_panel_tx_cmd_set(panel, type);
+	if (rc)
+		DSI_ERR("[%s] failed to send nolp cmd, rc=%d\n",
+						panel->name, rc);
+	dsi_panel_set_backlight(panel, panel->hbm_enabled ? panel->bl_config.bl_max_level : panel->bl_config.bl_level);
 	mutex_unlock(&panel->panel_lock);
 
 	return rc;
@@ -1956,11 +2006,15 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-on-commands",
 	"qcom,mdss-dsi-qsync-off-commands",
 	"mi,mdss-dsi-doze-hbm-command",
+	"mi,mdss-dsi-doze-lbm-command",
 	"mi,mdss-dsi-doze-hbm-nolp-command",
+	"mi,mdss-dsi-doze-lbm-nolp-command",
 	"mi,mdss-dsi-local-hbm-normal-white-1000nit-command",
 	"mi,mdss-dsi-local-hbm-hlpm-white-1000nit-command",
 	"mi,mdss-dsi-local-hbm-off-to-normal-command",
 	"mi,mdss-dsi-local-hbm-off-to-hlpm-command",
+	"mi,mdss-dsi-hbm-on-command",
+	"mi,mdss-dsi-hbm-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1988,11 +2042,15 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-on-commands-state",
 	"qcom,mdss-dsi-qsync-off-commands-state",
 	"mi,mdss-dsi-doze-hbm-command-state",
+	"mi,mdss-dsi-doze-lbm-command-state",
 	"mi,mdss-dsi-doze-hbm-nolp-command-state",
+	"mi,mdss-dsi-doze-lbm-nolp-command-state",
 	"mi,mdss-dsi-local-hbm-normal-white-1000nit-command-state",
 	"mi,mdss-dsi-local-hbm-hlpm-white-1000nit-command-state",
 	"mi,mdss-dsi-local-hbm-off-to-normal-command-state",
 	"mi,mdss-dsi-local-hbm-off-to-hlpm-command-state",
+	"mi,mdss-dsi-hbm-on-command-state",
+	"mi,mdss-dsi-hbm-off-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -3933,6 +3991,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	drm_panel_init(&panel->drm_panel);
 	panel->drm_panel.dev = &panel->mipi_device.dev;
 	panel->mipi_device.dev.of_node = of_node;
+	panel->doze_mode = DSI_DOZE_HBM;
 	panel->doze_enabled = false;
 	panel->doze_requested = false;
 	panel->fod_ui = false;
@@ -4610,6 +4669,9 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	if(panel->hbm_enabled)
+		dsi_panel_set_hbm_mode(panel, false);
+
 	mutex_lock(&panel->panel_lock);
 	if (!panel->panel_initialized)
 		goto exit;
@@ -4647,6 +4709,9 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 		DSI_ERR("invalid params\n");
 		return -EINVAL;
 	}
+
+	if(panel->hbm_enabled)
+                dsi_panel_set_hbm_mode(panel, false);
 
 	mutex_lock(&panel->panel_lock);
 	if (!panel->panel_initialized)
@@ -4702,6 +4767,9 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 
 exit:
 	mutex_unlock(&panel->panel_lock);
+	if (panel->hbm_enabled) {
+		dsi_panel_set_hbm_mode(panel, panel->hbm_enabled);
+	}
 	return rc;
 }
 
@@ -5036,6 +5104,10 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	else
 		panel->panel_initialized = true;
 	mutex_unlock(&panel->panel_lock);
+
+	if(panel->hbm_enabled)
+		dsi_panel_set_hbm_mode(panel, panel->hbm_enabled);
+
 	return rc;
 }
 
