@@ -192,6 +192,9 @@
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <8>;
 				qcom,mdss-dsc-block-prediction-enable;
+
+				qcom,panel-roi-alignment = <1440 50 1440 50 1440 50>;
+				qcom,partial-update-enabled = "single_roi";
 			};
 
 			timing@1{
@@ -340,6 +343,9 @@
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <8>;
 				qcom,mdss-dsc-block-prediction-enable;
+
+				qcom,panel-roi-alignment = <1440 50 1440 50 1440 50>;
+                                qcom,partial-update-enabled = "single_roi";
 			};
 		};
 	};
