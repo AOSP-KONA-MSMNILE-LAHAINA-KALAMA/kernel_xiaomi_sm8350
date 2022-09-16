@@ -193,7 +193,6 @@ struct plat_stmmacenet_data {
 	int mac_port_sel_speed;
 	bool en_tx_lpi_clockgating;
 	int has_xgmac;
-	bool sph_disable;
 	u16	(*tx_select_queue)
 		(struct net_device *dev, struct sk_buff *skb,
 		 struct net_device *sb_dev);
@@ -206,5 +205,6 @@ struct plat_stmmacenet_data {
 				int cmd);
 	void (*request_phy_wol)(void *plat);
 	int (*init_pps)(void *priv);
+	bool sph_disable;
 };
 #endif
