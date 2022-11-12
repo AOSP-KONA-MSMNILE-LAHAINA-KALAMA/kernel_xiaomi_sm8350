@@ -30,7 +30,7 @@
 #define CLK_HW_DIV			2
 #define GT_IRQ_STATUS			BIT(2)
 #define MAX_FN_SIZE			20
-#define LIMITS_POLLING_DELAY_MS		4
+#define LIMITS_POLLING_DELAY_MS		10
 #define MAX_ROW				2
 
 #define CYCLE_CNTR_OFFSET(c, m, acc_count)				\
@@ -610,7 +610,7 @@ static int qcom_cpu_resources_init(struct platform_device *pdev,
 		c->dcvsh_irq = of_irq_get(dev->of_node, index);
 		if (c->dcvsh_irq > 0) {
 			mutex_init(&c->dcvsh_lock);
-			INIT_DELAYED_WORK(&c->freq_poll_work,
+			INIT_DEFERRABLE_WORK(&c->freq_poll_work,
 					limits_dcvsh_poll);
 		}
 	}
