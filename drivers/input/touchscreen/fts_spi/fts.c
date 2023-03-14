@@ -5165,28 +5165,6 @@ err_pinctrl_get:
 	return retval;
 }
 
-static bool fts_judge_hwid(void)
-{
-	const char *product_name;
-	uint32_t major,minor;
-
-	product_name = product_name_get();
-	major = get_hw_version_build();
-	minor = get_hw_version_minor();
-	logError(1, "%s product_name:%s,major:%d,minor:%d\n", tag, product_name, major, minor);
-	if (!strncmp(product_name, "venus", 5))
-	{
-		if (major >= 2) {
-			logError(1, "%s %s don't need avdd-old supply\n", tag, __func__);
-			return 0;
-		} else {
-			logError(1, "%s %s need avdd-old supply\n", tag, __func__);
-			return 1;
-		}
-	}
-	return 0;
-}
-
 /**
  * Retrieve and parse the hw information from the device tree node defined in the system.
  * the most important information to obtain are: IRQ and RESET gpio numbers, power regulator names
@@ -5221,17 +5199,6 @@ static int parse_dt(struct device *dev, struct fts_hw_platform_data *bdata)
 	else {
 		bdata->vdd_reg_name = name;
 		logError(0, "%s bus_reg_name = %s\n", tag, name);
-	}
-	if (fts_judge_hwid()) {
-		retval = of_property_read_string(np, "fts,avddold-name", &name);
-		if (retval == -EINVAL)
-			bdata->avddold_name = NULL;
-		else if (retval < 0)
-			return retval;
-		else {
-			bdata->avddold_name = name;
-			logError(0, "%s avddold_reg_name = %s\n", tag, name);
-		}
 	}
 	if (of_property_read_bool(np, "fts,reset-gpio-enable")) {
 		bdata->reset_gpio = of_get_named_gpio_flags(np,
