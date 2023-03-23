@@ -4782,6 +4782,14 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 	int ret = NET_RX_DROP;
 	__be16 type;
 
+#ifdef CONFIG_ENABLE_SFE
+	int (*fast_recv)(struct sk_buff *skb, struct packet_type *pt_temp);
+#endif
+
+#ifdef CONFIG_ENABLE_GSB
+	int (*gsb_ns_recv)(struct sk_buff *skb);
+#endif
+
 	net_timestamp_check(!READ_ONCE(netdev_tstamp_prequeue), skb);
 
 	trace_netif_receive_skb(skb);
