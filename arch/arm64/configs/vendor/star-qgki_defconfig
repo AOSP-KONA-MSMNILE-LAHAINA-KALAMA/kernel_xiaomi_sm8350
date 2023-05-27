@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.161 Kernel Configuration
+# Linux/arm64 5.4.243 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="Proton clang version 13.0.0 (https://github.com/llvm/llvm-project b4fd512c36ca344a3ff69350219e8b0a67e9472a)"
 CONFIG_GCC_VERSION=0
@@ -869,6 +869,8 @@ CONFIG_SPECULATIVE_PAGE_FAULT=y
 CONFIG_ARCH_HAS_PTE_SPECIAL=y
 CONFIG_PRIORITIZE_OOM_TASKS=y
 CONFIG_OOM_TASK_PRIORITY_ADJ_LIMIT=0
+CONFIG_LRU_GEN=y
+CONFIG_LRU_GEN_ENABLED=y
 # end of Memory Management options
 
 # CONFIG_PROCESS_RECLAIM is not set
@@ -6351,7 +6353,7 @@ CONFIG_CC_HAS_AUTO_VAR_INIT_PATTERN=y
 CONFIG_CC_HAS_AUTO_VAR_INIT_ZERO=y
 # CONFIG_INIT_STACK_NONE is not set
 # CONFIG_INIT_STACK_ALL_PATTERN is not set
-CONFIG_INIT_STACK_ALL_ZERO=y
+# CONFIG_INIT_STACK_ALL_ZERO is not set
 CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y
 # CONFIG_INIT_ON_FREE_DEFAULT_ON is not set
 # end of Memory initialization
