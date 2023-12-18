@@ -125,7 +125,7 @@ struct inet_connection_sock {
 	} icsk_ack;
 #ifdef __GENKSYMS__
 	struct {
-		int		  enabled;
+		unsigned int		  enabled;
 
 		/* Range of MTUs to search */
 		int		  search_high;
@@ -143,7 +143,7 @@ struct inet_connection_sock {
 		int		  search_low;
 
 		/* Information on the current probe. */
-		int		  enabled:1;
+		unsigned int		  enabled:1;
 		int		  probe_size:31;
 
 		u32		  probe_timestamp;
