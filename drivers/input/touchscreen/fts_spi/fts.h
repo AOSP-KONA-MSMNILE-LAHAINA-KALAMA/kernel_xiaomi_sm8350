@@ -361,6 +361,7 @@ struct fts_ts_info {
 	struct mutex charge_lock;
 	int fod_icon_status;
 	int nonui_status;
+	int single_tap_pressed;
 };
 
 int fts_chip_powercycle(struct fts_ts_info *info);
