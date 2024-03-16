@@ -2805,14 +2805,6 @@ static ssize_t fts_double_tap_store(struct device *dev, struct device_attribute 
 }
 #endif
 
-static inline ssize_t single_tap_pressed_get(struct device *dev,
-		               struct device_attribute *attribute,
-			       char *buffer)
-{
-       struct fts_ts_info *info = dev_get_drvdata(dev);
-       return scnprintf(buffer, PAGE_SIZE, "%i\n", info->single_tap_pressed);
-}
-
 static DEVICE_ATTR(fts_lockdown, (S_IRUGO | S_IWUSR | S_IWGRP),
 		   fts_lockdown_show, fts_lockdown_store);
 static DEVICE_ATTR(fwupdate, (S_IRUGO | S_IWUSR | S_IWGRP), fts_fwupdate_show,
@@ -2871,8 +2863,6 @@ static DEVICE_ATTR(gesture_mask, (S_IRUGO | S_IWUSR | S_IWGRP),
 static DEVICE_ATTR(gesture_coordinates, (S_IRUGO | S_IWUSR | S_IWGRP),
 		   fts_gesture_coordinates_show, NULL);
 #endif
-static DEVICE_ATTR(single_tap_pressed, S_IRUGO,
-		   single_tap_pressed_get, NULL);
 
 #ifdef FTS_FOD_AREA_REPORT
 static DEVICE_ATTR(fod_status, (S_IRUGO | S_IWUSR | S_IWGRP),
@@ -2918,7 +2908,6 @@ static struct attribute *fts_attr_group[] = {
 	&dev_attr_gesture_mask.attr,
 	&dev_attr_gesture_coordinates.attr,
 #endif
-	&dev_attr_single_tap_pressed.attr,
 	&dev_attr_selftest_info.attr,
 	&dev_attr_ms_raw.attr,
 	&dev_attr_ss_raw.attr,
@@ -3548,8 +3537,6 @@ static void fts_gesture_event_handler(struct fts_ts_info *info,
 {
 	int value;
 	int needCoords = 0;
-	fts_info->single_tap_pressed = (event[2] == GEST_ID_SINGTAP) ? 1 : 0;
-	sysfs_notify(&fts_info->client->dev.kobj, NULL, "single_tap_pressed");
 #ifdef FTS_FOD_AREA_REPORT
 	int touch_area;
 	int fod_overlap;
