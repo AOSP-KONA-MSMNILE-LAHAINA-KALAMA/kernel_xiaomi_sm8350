@@ -474,8 +474,6 @@ static int drawobj_add_sync_timeline(struct kgsl_device *device,
 		return ret;
 	}
 
-	trace_syncpoint_timeline_fence(event->syncobj, event->fence, false);
-
 	/* Put the refcount from fence creation */
 	dma_fence_put(event->fence);
 	return 0;
