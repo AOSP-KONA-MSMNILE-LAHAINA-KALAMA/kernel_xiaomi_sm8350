@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
@@ -74,16 +73,10 @@
 #define SDE_INTR_INTF_1_UNDERRUN BIT(26)
 #define SDE_INTR_INTF_2_UNDERRUN BIT(28)
 #define SDE_INTR_INTF_3_UNDERRUN BIT(30)
-#define SDE_INTR_INTF_4_UNDERRUN BIT(20)
-#define SDE_INTR_INTF_5_UNDERRUN BIT(22)
-#define SDE_INTR_INTF_6_UNDERRUN BIT(16)
 #define SDE_INTR_INTF_0_VSYNC BIT(25)
 #define SDE_INTR_INTF_1_VSYNC BIT(27)
 #define SDE_INTR_INTF_2_VSYNC BIT(29)
 #define SDE_INTR_INTF_3_VSYNC BIT(31)
-#define SDE_INTR_INTF_4_VSYNC BIT(21)
-#define SDE_INTR_INTF_5_VSYNC BIT(23)
-#define SDE_INTR_INTF_6_VSYNC BIT(17)
 
 /**
  * Pingpong Secondary interrupt status bit definitions
@@ -258,6 +251,33 @@ static struct sde_irq_type sde_irq_intr_map[] = {
 	{ SDE_IRQ_TYPE_PING_PONG_COMP, PINGPONG_3,
 		SDE_INTR_PING_PONG_3_DONE, -1},
 
+	{ SDE_IRQ_TYPE_PING_PONG_RD_PTR, PINGPONG_0,
+		SDE_INTR_PING_PONG_0_RD_PTR, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_RD_PTR, PINGPONG_1,
+		SDE_INTR_PING_PONG_1_RD_PTR, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_RD_PTR, PINGPONG_2,
+		SDE_INTR_PING_PONG_2_RD_PTR, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_RD_PTR, PINGPONG_3,
+		SDE_INTR_PING_PONG_3_RD_PTR, -1},
+
+	{ SDE_IRQ_TYPE_PING_PONG_WR_PTR, PINGPONG_0,
+		SDE_INTR_PING_PONG_0_WR_PTR, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_WR_PTR, PINGPONG_1,
+		SDE_INTR_PING_PONG_1_WR_PTR, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_WR_PTR, PINGPONG_2,
+		SDE_INTR_PING_PONG_2_WR_PTR, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_WR_PTR, PINGPONG_3,
+		SDE_INTR_PING_PONG_3_WR_PTR, -1},
+
+	{ SDE_IRQ_TYPE_PING_PONG_AUTO_REF, PINGPONG_0,
+		SDE_INTR_PING_PONG_0_AUTOREFRESH_DONE, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_AUTO_REF, PINGPONG_1,
+		SDE_INTR_PING_PONG_1_AUTOREFRESH_DONE, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_AUTO_REF, PINGPONG_2,
+		SDE_INTR_PING_PONG_2_AUTOREFRESH_DONE, -1},
+	{ SDE_IRQ_TYPE_PING_PONG_AUTO_REF, PINGPONG_3,
+		SDE_INTR_PING_PONG_3_AUTOREFRESH_DONE, -1},
+
 	{ SDE_IRQ_TYPE_INTF_UNDER_RUN, INTF_0, SDE_INTR_INTF_0_UNDERRUN, -1},
 	{ SDE_IRQ_TYPE_INTF_VSYNC, INTF_0, SDE_INTR_INTF_0_VSYNC, -1},
 	{ SDE_IRQ_TYPE_INTF_UNDER_RUN, INTF_1, SDE_INTR_INTF_1_UNDERRUN, -1},
@@ -267,13 +287,6 @@ static struct sde_irq_type sde_irq_intr_map[] = {
 	{ SDE_IRQ_TYPE_INTF_VSYNC, INTF_2, SDE_INTR_INTF_2_VSYNC, -1},
 	{ SDE_IRQ_TYPE_INTF_UNDER_RUN, INTF_3, SDE_INTR_INTF_3_UNDERRUN, -1},
 	{ SDE_IRQ_TYPE_INTF_VSYNC, INTF_3, SDE_INTR_INTF_3_VSYNC, -1},
-
-	{ SDE_IRQ_TYPE_INTF_UNDER_RUN, INTF_4, SDE_INTR_INTF_4_UNDERRUN, -1},
-	{ SDE_IRQ_TYPE_INTF_VSYNC, INTF_4, SDE_INTR_INTF_4_VSYNC, -1},
-	{ SDE_IRQ_TYPE_INTF_UNDER_RUN, INTF_5, SDE_INTR_INTF_5_UNDERRUN, -1},
-	{ SDE_IRQ_TYPE_INTF_VSYNC, INTF_5, SDE_INTR_INTF_5_VSYNC, -1},
-	{ SDE_IRQ_TYPE_INTF_UNDER_RUN, INTF_6, SDE_INTR_INTF_6_UNDERRUN, -1},
-	{ SDE_IRQ_TYPE_INTF_VSYNC, INTF_6, SDE_INTR_INTF_6_VSYNC, -1},
 };
 
 static struct sde_irq_type sde_irq_intr2_map[] = {
@@ -456,6 +469,8 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 	 */
 	spin_lock_irqsave(&intr->irq_lock, irq_flags);
 	for (reg_idx = 0; reg_idx < intr->sde_irq_size; reg_idx++) {
+		irq_status = intr->save_irq_status[reg_idx];
+
 		/*
 		 * Each Interrupt register has dynamic range of indexes,
 		 * initialized during hw_intr_init when sde_irq_tbl is created.
@@ -466,9 +481,6 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 		if (start_idx >= intr->sde_irq_map_size ||
 				end_idx > intr->sde_irq_map_size)
 			continue;
-
-		irq_status = SDE_REG_READ(&intr->hw,
-				intr->sde_irq_tbl[reg_idx].status_off);
 
 		/*
 		 * Search through matching intr status from irq map.
@@ -492,9 +504,8 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 				if (cbfunc)
 					cbfunc(arg, irq_idx);
 				else
-					SDE_REG_WRITE(&intr->hw,
-						intr->sde_irq_tbl[reg_idx].clr_off,
-						intr->sde_irq_map[irq_idx].irq_mask);
+					intr->ops.clear_intr_status_nolock(
+							intr, irq_idx);
 
 				/*
 				 * When callback finish, clear the irq_status
@@ -544,6 +555,9 @@ static int sde_hw_intr_enable_irq_nolock(struct sde_hw_intr *intr, int irq_idx)
 		SDE_REG_WRITE(&intr->hw, reg->clr_off, irq->irq_mask);
 		/* Enabling interrupts with the new mask */
 		SDE_REG_WRITE(&intr->hw, reg->en_off, cache_irq_mask);
+
+		/* ensure register write goes through */
+		wmb();
 
 		intr->cache_irq_mask[reg_idx] = cache_irq_mask;
 	}
@@ -660,6 +674,40 @@ static int sde_hw_intr_get_interrupt_sources(struct sde_hw_intr *intr,
 	return 0;
 }
 
+static void sde_hw_intr_get_interrupt_statuses(struct sde_hw_intr *intr)
+{
+	int i;
+	u32 enable_mask;
+	unsigned long irq_flags;
+
+	if (!intr)
+		return;
+
+	spin_lock_irqsave(&intr->irq_lock, irq_flags);
+	for (i = 0; i < intr->sde_irq_size; i++) {
+		/* Read interrupt status */
+		intr->save_irq_status[i] = SDE_REG_READ(&intr->hw,
+				intr->sde_irq_tbl[i].status_off);
+
+		/* Read enable mask */
+		enable_mask = SDE_REG_READ(&intr->hw,
+				intr->sde_irq_tbl[i].en_off);
+
+		/* and clear the interrupt */
+		if (intr->save_irq_status[i])
+			SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[i].clr_off,
+					intr->save_irq_status[i]);
+
+		/* Finally update IRQ status based on enable mask */
+		intr->save_irq_status[i] &= enable_mask;
+	}
+
+	/* ensure register writes go through */
+	wmb();
+
+	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
+}
+
 static void sde_hw_intr_clear_intr_status_force_mask(struct sde_hw_intr *intr,
 						 int irq_idx, u32 irq_mask)
 {
@@ -716,20 +764,12 @@ static void sde_hw_intr_clear_interrupt_status(struct sde_hw_intr *intr,
 		int irq_idx)
 {
 	unsigned long irq_flags;
-	int reg_idx;
 
 	if (!intr)
 		return;
 
-	reg_idx = intr->sde_irq_map[irq_idx].reg_idx;
-	if (reg_idx < 0 || reg_idx > intr->sde_irq_size) {
-		pr_err("invalid irq reg:%d irq:%d\n", reg_idx, irq_idx);
-		return;
-	}
-
 	spin_lock_irqsave(&intr->irq_lock, irq_flags);
-	SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
-			intr->sde_irq_map[irq_idx].irq_mask);
+	sde_hw_intr_clear_intr_status_nolock(intr, irq_idx);
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 }
 
@@ -795,6 +835,9 @@ static u32 sde_hw_intr_get_interrupt_status(struct sde_hw_intr *intr,
 	if (intr_status && clear)
 		SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
 				intr_status);
+
+	/* ensure register writes go through */
+	wmb();
 
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 
@@ -918,6 +961,7 @@ static void __setup_intr_ops(struct sde_hw_intr_ops *ops)
 	ops->disable_all_irqs = sde_hw_intr_disable_irqs;
 	ops->get_valid_interrupts = sde_hw_intr_get_valid_interrupts;
 	ops->get_interrupt_sources = sde_hw_intr_get_interrupt_sources;
+	ops->get_interrupt_statuses = sde_hw_intr_get_interrupt_statuses;
 	ops->clear_interrupt_status = sde_hw_intr_clear_interrupt_status;
 	ops->clear_intr_status_nolock = sde_hw_intr_clear_intr_status_nolock;
 	ops->clear_intr_status_force_mask =
@@ -945,6 +989,7 @@ void sde_hw_intr_destroy(struct sde_hw_intr *intr)
 		kfree(intr->sde_irq_tbl);
 		kfree(intr->sde_irq_map);
 		kfree(intr->cache_irq_mask);
+		kfree(intr->save_irq_status);
 		kfree(intr);
 	}
 }
@@ -1204,6 +1249,13 @@ struct sde_hw_intr *sde_hw_intr_init(void __iomem *addr,
 	intr->cache_irq_mask = kcalloc(intr->sde_irq_size,
 			sizeof(*intr->cache_irq_mask), GFP_KERNEL);
 	if (intr->cache_irq_mask == NULL) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	intr->save_irq_status = kcalloc(intr->sde_irq_size,
+			sizeof(*intr->save_irq_status), GFP_KERNEL);
+	if (intr->save_irq_status == NULL) {
 		ret = -ENOMEM;
 		goto exit;
 	}

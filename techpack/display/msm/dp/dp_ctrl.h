@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
@@ -43,7 +42,6 @@ struct dp_ctrl_in {
 	struct dp_parser *parser;
 	struct dp_power *power;
 	struct dp_catalog_ctrl *catalog;
-	struct dp_pll *pll;
 };
 
 struct dp_ctrl *dp_ctrl_get(struct dp_ctrl_in *in);

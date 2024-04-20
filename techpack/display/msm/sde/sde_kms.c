@@ -55,6 +55,8 @@
 #include "sde_connector.h"
 #include "sde_vm.h"
 
+#include "mi_sde_connector.h"
+
 #include <linux/qcom_scm.h>
 #include "soc/qcom/secure_buffer.h"
 #include <linux/qtee_shmbridge.h>
@@ -66,8 +68,6 @@
 /* defines for secure channel call */
 #define MEM_PROTECT_SD_CTRL_SWITCH 0x18
 #define MDP_DEVICE_ID            0x1A
-
-#define DEMURA_REGION_NAME_MAX      32
 
 EXPORT_TRACEPOINT_SYMBOL(tracing_mark_write);
 
@@ -380,7 +380,7 @@ static int _sde_kms_scm_call(struct sde_kms *sde_kms, int vmid)
 	ret = qcom_scm_mem_protect_sd_ctrl(MDP_DEVICE_ID, mem_addr,
 				mem_size, vmid);
 	if (ret)
-		SDE_ERROR("Error:scm_call2, vmid %d, ret%d\n",
+		SDE_ERROR("Error:scm_call2, vmid %lld, ret%d\n",
 				vmid, ret);
 	SDE_EVT32(MEM_PROTECT_SD_CTRL_SWITCH, MDP_DEVICE_ID, mem_size,
 			vmid, qtee_en, num_sids, ret);
@@ -970,7 +970,7 @@ static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
 			old_mode = DRM_PANEL_BLANK_POWERDOWN;
 		}
 
-		if (old_mode != new_mode) {
+		if ((old_mode != new_mode) || (old_fps != new_fps)) {
 			struct drm_panel_notifier notifier_data;
 
 			SDE_EVT32(old_mode, new_mode, old_fps, new_fps,
@@ -1509,8 +1509,9 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 			pr_err("Connector Post kickoff failed rc=%d\n",
 					 rc);
 		}
-
-		sde_connector_fod_post_kickoff(connector);
+#if 0
+		mi_sde_connector_fod_notify(connector);
+#endif
 	}
 
 	vm_ops = sde_vm_get_ops(sde_kms);
@@ -1781,7 +1782,6 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.set_allowed_mode_switch = NULL,
 	};
 	static const struct sde_connector_ops dp_ops = {
-		.set_info_blob = dp_connector_set_info_blob,
 		.post_init  = dp_connector_post_init,
 		.detect     = dp_connector_detect,
 		.get_modes  = dp_connector_get_modes,
@@ -1931,7 +1931,6 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 	for (i = 0; i < sde_kms->dp_display_count &&
 			priv->num_encoders < max_encoders; ++i) {
 		int idx;
-		struct dp_display_info dp_info = {0};
 
 		display = sde_kms->dp_displays[i];
 		encoder = NULL;
@@ -1943,13 +1942,6 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 			continue;
 		}
 
-		rc = dp_display_get_info(display, &dp_info);
-		if (rc) {
-			SDE_ERROR("failed to read dp info, %d\n", rc);
-			continue;
-		}
-
-		info.h_tile_instance[0] = dp_info.intf_idx[0];
 		encoder = sde_encoder_init(dev, &info);
 		if (IS_ERR_OR_NULL(encoder)) {
 			SDE_ERROR("dp encoder init failed %d\n", i);
@@ -1970,7 +1962,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 					display,
 					&dp_ops,
 					DRM_CONNECTOR_POLL_HPD,
-					info.intf_type);
+					DRM_MODE_CONNECTOR_DisplayPort);
 		if (connector) {
 			priv->encoders[priv->num_encoders++] = encoder;
 			priv->connectors[priv->num_connectors++] = connector;
@@ -1983,9 +1975,9 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		/* update display cap to MST_MODE for DP MST encoders */
 		info.capabilities |= MSM_DISPLAY_CAP_MST_MODE;
 
-		for (idx = 0; idx < dp_info.stream_cnt &&
+		for (idx = 0; idx < sde_kms->dp_stream_count &&
 				priv->num_encoders < max_encoders; idx++) {
-			info.h_tile_instance[0] = dp_info.intf_idx[idx];
+			info.h_tile_instance[0] = idx;
 			encoder = sde_encoder_init(dev, &info);
 			if (IS_ERR_OR_NULL(encoder)) {
 				SDE_ERROR("dp mst encoder init failed %d\n", i);
@@ -3271,7 +3263,7 @@ static int sde_kms_inform_cont_splash_res_disable(struct msm_kms *kms,
 		rc = dsi_display_get_info(NULL, &info, display);
 		if (rc) {
 			SDE_ERROR("%s: dsi get_info failed: %d\n",
-					__func__, rc);
+					rc, __func__);
 			encoder = NULL;
 		}
 	}
@@ -3621,7 +3613,7 @@ static int sde_kms_get_mixer_count(const struct msm_kms *kms,
 
 		mode_clock_hz = lm_clk_fp;
 	}
-	SDE_DEBUG("[%s] h=%d v=%d fps=%d lm=%d mode_clk=%u max_clk=%llu\n",
+	SDE_DEBUG("[%s] h=%d v=%d fps=%d lm=%d mode_clk=%llu max_clk=%llu\n",
 			mode->name, mode->htotal, mode->vtotal, mode->vrefresh,
 			*num_lm, drm_fixp2int(mode_clock_hz),
 			sde_kms->perf.max_core_clk_rate);
@@ -3629,7 +3621,7 @@ static int sde_kms_get_mixer_count(const struct msm_kms *kms,
 
 error:
 	SDE_ERROR("required mode clk exceeds max mdp clk\n");
-	SDE_ERROR("[%s] h=%d v=%d fps=%d lm=%d mode_clk=%u max_clk=%llu\n",
+	SDE_ERROR("[%s] h=%d v=%d fps=%d lm=%d mode_clk=%llu max_clk=%llu\n",
 			mode->name, mode->htotal, mode->vtotal, mode->vrefresh,
 			*num_lm, drm_fixp2int(mode_clock_hz),
 			sde_kms->perf.max_core_clk_rate);
@@ -3841,7 +3833,6 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 	struct drm_device *ddev = dev_get_drvdata(dev);
 	struct drm_connector *conn;
 	struct drm_connector_list_iter conn_iter;
-	struct sde_encoder_virt *sde_enc;
 	struct msm_drm_private *priv = sde_kms->dev->dev_private;
 
 	drm_connector_list_iter_begin(ddev, &conn_iter);
@@ -3855,7 +3846,6 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 		if (sde_encoder_in_clone_mode(conn->encoder))
 			continue;
 
-		sde_enc = to_sde_encoder_virt(conn->encoder);
 		crtc_id = drm_crtc_index(conn->state->crtc);
 		if (priv->disp_thread[crtc_id].thread)
 			kthread_flush_worker(
@@ -3873,14 +3863,6 @@ static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 					&priv->event_thread[crtc_id].worker);
 			sde_encoder_idle_request(conn->encoder);
 		}
-
-		if (sde_enc->vblank_enabled) {
-			sde_encoder_wait_for_event(conn->encoder, MSM_ENC_VBLANK);
-			if (priv->event_thread[crtc_id].thread)
-				kthread_flush_worker(
-					&priv->event_thread[crtc_id].worker);
-		}
-
 	}
 	drm_connector_list_iter_end(&conn_iter);
 
@@ -4784,7 +4766,7 @@ static int _sde_kms_hw_init_blocks(struct sde_kms *sde_kms,
 				sde_kms->sid_len, sde_kms->catalog);
 		if (IS_ERR_OR_NULL(sde_kms->hw_sid)) {
 			rc = PTR_ERR(sde_kms->hw_sid);
-			SDE_ERROR("failed to init sid %d\n", rc);
+			SDE_ERROR("failed to init sid %ld\n", rc);
 			sde_kms->hw_sid = NULL;
 			goto power_error;
 		}

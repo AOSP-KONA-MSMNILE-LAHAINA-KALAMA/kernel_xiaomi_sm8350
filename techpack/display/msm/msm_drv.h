@@ -83,6 +83,9 @@ struct msm_gem_vma;
 
 #define TEARDOWN_DEADLOCK_RETRY_MAX 5
 
+extern atomic_t resume_pending;
+extern wait_queue_head_t resume_wait_q;
+
 struct msm_file_private {
 	rwlock_t queuelock;
 	struct list_head submitqueues;
@@ -177,6 +180,8 @@ enum msm_mdp_crtc_property {
 	CRTC_PROP_CACHE_STATE,
 	CRTC_PROP_VM_REQ_STATE,
 
+	CRCT_PROP_MI_FOD_SYNC_INFO,
+
 #ifdef CONFIG_DRM_SDE_EXPO
 	CRTC_PROP_DIM_LAYER_EXPO,
 #endif
@@ -259,11 +264,11 @@ enum msm_display_spr_pack_type {
 };
 
 static const char *msm_spr_pack_type_str[MSM_DISPLAY_SPR_TYPE_MAX] = {
-	[MSM_DISPLAY_SPR_TYPE_NONE] =  "",
-	[MSM_DISPLAY_SPR_TYPE_PENTILE] =  "pentile",
-	[MSM_DISPLAY_SPR_TYPE_RGBW] =  "rgbw",
-	[MSM_DISPLAY_SPR_TYPE_YYGM] =  "yygm",
-	[MSM_DISPLAY_SPR_TYPE_YYGW] =  "yygw",
+	[MSM_DISPLAY_SPR_TYPE_NONE] = "",
+	[MSM_DISPLAY_SPR_TYPE_PENTILE] = "pentile",
+	[MSM_DISPLAY_SPR_TYPE_RGBW] = "rgbw",
+	[MSM_DISPLAY_SPR_TYPE_YYGM] = "yygm",
+	[MSM_DISPLAY_SPR_TYPE_YYGW] = "yygw"
 };
 
 /**
@@ -889,8 +894,6 @@ struct msm_drm_private {
 	struct task_struct *pp_event_thread;
 	struct kthread_worker pp_event_worker;
 
-	struct kthread_work thread_priority_work;
-
 	unsigned int num_encoders;
 	struct drm_encoder *encoders[MAX_ENCODERS];
 
@@ -1329,8 +1332,6 @@ static inline void sde_rotator_smmu_driver_unregister(void)
 {
 }
 #endif /* CONFIG_MSM_SDE_ROTATOR */
-
-void __init sde_fence_register(void);
 
 struct clk *msm_clk_get(struct platform_device *pdev, const char *name);
 int msm_clk_bulk_get(struct device *dev, struct clk_bulk_data **bulk);

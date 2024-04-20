@@ -565,6 +565,8 @@ static int sde_hw_intf_setup_te_config(struct sde_hw_intf *intf,
 	 * less than 2^16 vsync clk cycles.
 	 */
 	spin_lock(&tearcheck_spinlock);
+	SDE_REG_WRITE(c, INTF_TEAR_SYNC_WRCOUNT,
+			(te->start_pos + te->sync_threshold_start + 1));
 	SDE_REG_WRITE(c, INTF_TEAR_SYNC_CONFIG_VSYNC, cfg);
 	wmb(); /* disable vsync counter before updating single buffer registers */
 	SDE_REG_WRITE(c, INTF_TEAR_SYNC_CONFIG_HEIGHT, te->sync_cfg_height);
@@ -577,10 +579,6 @@ static int sde_hw_intf_setup_te_config(struct sde_hw_intf *intf,
 			 te->sync_threshold_start));
 	cfg |= BIT(19); /* VSYNC_COUNTER_EN */
 	SDE_REG_WRITE(c, INTF_TEAR_SYNC_CONFIG_VSYNC, cfg);
-	wmb(); /* ensure vsync_counter_en is written */
-
-	SDE_REG_WRITE(c, INTF_TEAR_SYNC_WRCOUNT,
-			(te->start_pos + te->sync_threshold_start + 1));
 	spin_unlock(&tearcheck_spinlock);
 
 	return 0;
@@ -693,7 +691,7 @@ static int sde_hw_intf_connect_external_te(struct sde_hw_intf *intf,
 }
 
 static int sde_hw_intf_get_vsync_info(struct sde_hw_intf *intf,
-		struct sde_hw_pp_vsync_info *info, bool wr_ptr_only)
+		struct sde_hw_pp_vsync_info *info)
 {
 	struct sde_hw_blk_reg_map *c = &intf->hw;
 	u32 val;
@@ -703,17 +701,18 @@ static int sde_hw_intf_get_vsync_info(struct sde_hw_intf *intf,
 
 	c = &intf->hw;
 
-	if (!wr_ptr_only) {
-		val = SDE_REG_READ(c, INTF_TEAR_VSYNC_INIT_VAL);
-		info->rd_ptr_init_val = val & 0xffff;
+	val = SDE_REG_READ(c, INTF_TEAR_VSYNC_INIT_VAL);
+	info->rd_ptr_init_val = val & 0xffff;
 
-		val = SDE_REG_READ(c, INTF_TEAR_INT_COUNT_VAL);
-		info->rd_ptr_frame_count = (val & 0xffff0000) >> 16;
-		info->rd_ptr_line_count = val & 0xffff;
-	}
+	val = SDE_REG_READ(c, INTF_TEAR_INT_COUNT_VAL);
+	info->rd_ptr_frame_count = (val & 0xffff0000) >> 16;
+	info->rd_ptr_line_count = val & 0xffff;
 
 	val = SDE_REG_READ(c, INTF_TEAR_LINE_COUNT);
 	info->wr_ptr_line_count = val & 0xffff;
+
+	val = SDE_REG_READ(c, INTF_FRAME_COUNT);
+	info->intf_frame_count = val;
 
 	return 0;
 }
