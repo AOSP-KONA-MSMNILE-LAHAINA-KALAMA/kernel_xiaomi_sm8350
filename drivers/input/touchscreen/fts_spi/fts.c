@@ -2785,6 +2785,18 @@ static ssize_t fts_fod_status_store(struct device *dev, struct device_attribute 
 
 	return count;
 }
+
+static inline ssize_t fod_state_show(struct device *dev,
+		               struct device_attribute *attribute,
+			       char *buf)
+{
+	struct fts_ts_info *info = dev_get_drvdata(dev);
+
+	int fod_pressed = info->fod_pressed ? 1 : 0;
+
+	return snprintf(buf, PAGE_SIZE, "%d,%d,%d\n", info->fod_x, info->fod_y, fod_pressed);
+}
+
 #endif
 
 #ifdef GESTURE_MODE
@@ -2867,6 +2879,8 @@ static DEVICE_ATTR(gesture_coordinates, (S_IRUGO | S_IWUSR | S_IWGRP),
 #ifdef FTS_FOD_AREA_REPORT
 static DEVICE_ATTR(fod_status, (S_IRUGO | S_IWUSR | S_IWGRP),
 		   fts_fod_status_show, fts_fod_status_store);
+static DEVICE_ATTR(fod_state, S_IRUGO,
+		   fod_state_show, NULL);
 #endif
 
 #ifdef GESTURE_MODE
@@ -2919,6 +2933,9 @@ static struct attribute *fts_attr_group[] = {
 	&dev_attr_ms_strength.attr,
 	&dev_attr_ss_hover.attr,
 	&dev_attr_hover_tune.attr,
+#ifdef FTS_FOD_AREA_REPORT
+	&dev_attr_fod_state.attr,
+#endif
 	NULL,
 };
 
@@ -3593,6 +3610,7 @@ static void fts_gesture_event_handler(struct fts_ts_info *info,
 						input_report_abs(info->input_dev, ABS_MT_ORIENTATION, info->orientation);
 						input_sync(info->input_dev);
 					}
+					sysfs_notify(&fts_info->client->dev.kobj, NULL, "fod_state");
 				}
 			} else if (info->sensor_sleep)
 				__clear_bit(0, &info->fod_id);
@@ -3605,6 +3623,7 @@ static void fts_gesture_event_handler(struct fts_ts_info *info,
 			info->sleep_finger = 0;
 			info->fod_overlap = 0;
 			info->fod_pressed = false;
+			sysfs_notify(&fts_info->client->dev.kobj, NULL, "fod_state");
 			goto gesture_done;
 		}
 #endif
